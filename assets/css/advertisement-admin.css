@@ -1,0 +1,42 @@
+/**
+ * Advertisement Slots Admin Styles
+ *
+ * @package ObydullahMagazineCore
+ * @since   1.0.0
+ */
+
+.obmc-repeater .obmc-repeater-row {
+    background: #fff;
+    border: 1px solid #ccd0d4;
+    border-radius: 4px;
+    padding: 10px 15px;
+    margin-bottom: 10px;
+}
+
+.obmc-repeater .obmc-repeater-row p {
+    margin: 0 0 12px;
+}
+
+.obmc-repeater .obmc-repeater-row label strong {
+    display: inline-block;
+    margin-bottom: 4px;
+}
+
+.obmc-repeater .obmc-repeater-row hr {
+    border: 0;
+    border-top: 1px solid #f0f0f1;
+    margin: 12px 0 0;
+}
+
+.obmc-ad-slot-row .obmc-remove-row {
+    margin-bottom: 4px;
+}
+
+#obmc-add-ad-slot {
+    margin-top: 4px;
+}
+
+.obmc-ad-slot-row textarea.large-text {
+    font-family: Consolas, Monaco, monospace;
+    font-size: 12px;
+}

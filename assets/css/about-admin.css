@@ -1,0 +1,57 @@
+/**
+ * About Page Admin Styles
+ *
+ * @package ObydullahMagazineCore
+ * @since   1.0.0
+ */
+
+.obmc-slide-row {
+    background: #fff;
+    border: 1px solid #ccd0d4;
+    border-radius: 4px;
+    padding: 10px 15px;
+    margin-bottom: 10px;
+}
+
+.obmc-slide-row p {
+    margin: 0 0 12px;
+}
+
+.obmc-slide-row label {
+    display: inline-block;
+    margin-bottom: 4px;
+    font-weight: 600;
+}
+
+.slide-image-wrapper {
+    border-top: 1px solid #f0f0f1;
+    padding-top: 12px;
+}
+
+.slide-image-wrapper .image-preview {
+    margin-bottom: 8px;
+}
+
+.slide-image-wrapper .preview-thumb {
+    display: block;
+    max-width: 260px;
+    height: auto;
+    border: 1px solid #ccd0d4;
+    border-radius: 3px;
+}
+
+.slide-image-wrapper .button {
+    margin-right: 6px;
+}
+
+.obmc-slides-repeater .hidden {
+    display: none;
+}
+
+.obmc-slides-repeater .mt-1 {
+    margin-top: 8px;
+}
+
+#obmc-add-about-slide {
+    margin-top: 4px;
+}

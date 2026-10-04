@@ -1,0 +1,38 @@
+/**
+ * Newsletter Subscribers Admin Styles
+ *
+ * @package ObydullahMagazineCore
+ * @since   1.0.0
+ */
+
+.status-active,
+.status-inactive {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 9px;
+    font-size: 12px;
+    font-weight: 600;
+    line-height: 1.6;
+}
+
+.status-active {
+    background: #edf7ed;
+    color: #1a7a37;
+}
+
+.status-inactive {
+    background: #f0f0f1;
+    color: #646970;
+}
+
+.obmc-toggle-status {
+    text-decoration: none;
+}
+
+.obmc-toggle-status:hover {
+    text-decoration: underline;
+}
+
+.column-status {
+    width: 200px;
+}

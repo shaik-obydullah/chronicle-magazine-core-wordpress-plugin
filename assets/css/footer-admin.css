@@ -1,0 +1,37 @@
+/**
+ * Footer Settings Admin Styles
+ *
+ * @package ObydullahMagazineCore
+ *
+ * @since   1.0.0
+ */
+
+.obmc-footer-link-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+    background: #fff;
+    border: 1px solid #ccd0d4;
+    border-radius: 4px;
+    padding: 10px;
+    margin-bottom: 8px;
+}
+
+.obmc-footer-link-row .obmc-link-text {
+    flex: 1 1 30%;
+    min-width: 160px;
+}
+
+.obmc-footer-link-row .obmc-link-url {
+    flex: 2 1 50%;
+    min-width: 220px;
+}
+
+.obmc-footer-link-row .obmc-remove-row {
+    flex: 0 0 auto;
+}
+
+#obmc-add-footer-link {
+    margin-top: 4px;
+}

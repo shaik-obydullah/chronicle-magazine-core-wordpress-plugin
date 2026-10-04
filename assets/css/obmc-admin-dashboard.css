@@ -1,23 +1,23 @@
 /**
  * Dashboard Admin Styles
  *
- * @package ChronicleMagazineCore
+ * @package ObydullahMagazineCore
  * @since   1.0.0
  */
 
-.cmc-dashboard-description {
+.obmc-dashboard-description {
     color: #646970;
     margin-bottom: 20px;
 }
 
-.cmc-dashboard-grid {
+.obmc-dashboard-grid {
     display: flex;
     flex-wrap: wrap;
     gap: 20px;
     margin-top: 20px;
 }
 
-.cmc-dashboard-card {
+.obmc-dashboard-card {
     background: #fff;
     border: 1px solid #ccd0d4;
     border-radius: 4px;
@@ -28,11 +28,11 @@
     transition: box-shadow 0.2s ease;
 }
 
-.cmc-dashboard-card:hover {
+.obmc-dashboard-card:hover {
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
 }
 
-.cmc-dashboard-card .dashicons {
+.obmc-dashboard-card .dashicons {
     font-size: 48px;
     width: 48px;
     height: 48px;
@@ -41,12 +41,12 @@
     color: black;
 }
 
-.cmc-dashboard-card h2 {
+.obmc-dashboard-card h2 {
     margin: 0 0 10px;
     font-size: 1.2em;
     color: #1d2327;
 }
 
-.cmc-dashboard-card .button {
+.obmc-dashboard-card .button {
     margin-top: 5px;
 }
