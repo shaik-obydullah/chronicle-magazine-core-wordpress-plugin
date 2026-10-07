@@ -3,7 +3,7 @@
  * Plugin Name: Obydullah Magazine Core
  * Plugin URI: https://obydullah.com/project/chronicle-magazine-core-wordpress-plugin
  * Description: Core functionality for Chronicle Magazine theme
- * Version: 1.0.0
+ * Version: 1.0.1
  * Author: Shaik Obydullah
  * Author URI: https://obydullah.com
  * Text Domain: obydullah-magazine-core
@@ -41,7 +41,7 @@ if ( ! defined( 'ABSPATH' ) ) {
     exit;
 }
 
-define( 'OBMC_VERSION', '1.0.0' );
+define( 'OBMC_VERSION', '1.0.1' );
 define( 'OBMC_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 define( 'OBMC_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
 define( 'OBMC_NEWSLETTER_CACHE_GROUP', 'obmc_newsletter' );
@@ -81,7 +81,7 @@ function obmc_magazine_core_page() {
         ),
         'featured_articles' => array(
             'title' => __( 'Featured Articles', 'obydullah-magazine-core' ),
-            'url'   => admin_url( 'edit.php?post_type=obmc_featured_article' ),
+            'url'   => admin_url( 'edit.php?post_type=obmc_featured' ),
             'icon'  => 'dashicons-star-filled',
         ),
         'articles' => array(
@@ -242,7 +242,11 @@ add_action( 'save_post_obmc_hero_slide', 'obmc_save_hero_slide_meta' );
 ====================================================== */
 
 function obmc_register_featured_article_cpt() {
-    register_post_type( 'obmc_featured_article', array(
+    // `obmc_featured_article` is 21 characters, one over WordPress' 20 character
+    // post type limit, so 1.0.0 raised a _doing_it_wrong() notice on every
+    // request. The rewrite slug stays `obmc_featured_article` on purpose so
+    // permalinks created before 1.0.1 keep resolving.
+    register_post_type( 'obmc_featured', array(
         'labels' => array(
             'name'          => __( 'Featured Articles', 'obydullah-magazine-core' ),
             'singular_name' => __( 'Featured Article', 'obydullah-magazine-core' ),
@@ -303,7 +307,7 @@ function obmc_limit_single_instance_cpt( $post_type ) {
 }
 
 function obmc_limit_featured_article() {
-    obmc_limit_single_instance_cpt( 'obmc_featured_article' );
+    obmc_limit_single_instance_cpt( 'obmc_featured' );
 }
 add_action( 'load-post-new.php', 'obmc_limit_featured_article' );
 
@@ -312,7 +316,7 @@ function obmc_add_featured_article_meta_box() {
         'obmc_featured_article_meta',
         __( 'Featured Article Settings', 'obydullah-magazine-core' ),
         'obmc_render_featured_article_meta_box',
-        'obmc_featured_article',
+        'obmc_featured',
         'normal',
         'high'
     );
@@ -362,7 +366,7 @@ function obmc_save_featured_article_meta( $post_id ) {
         return;
     }
 
-    if ( 'obmc_featured_article' !== get_post_type( $post_id ) ) {
+    if ( 'obmc_featured' !== get_post_type( $post_id ) ) {
         return;
     }
 
@@ -378,7 +382,7 @@ function obmc_save_featured_article_meta( $post_id ) {
         update_post_meta( $post_id, 'obmc_publish_date', sanitize_text_field( wp_unslash( $_POST['obmc_publish_date'] ) ) );
     }
 }
-add_action( 'save_post_obmc_featured_article', 'obmc_save_featured_article_meta' );
+add_action( 'save_post_obmc_featured', 'obmc_save_featured_article_meta' );
 
 /* ======================================================
    4. Articles CPT + Category Taxonomy + Meta Boxes
@@ -973,7 +977,105 @@ function obmc_create_newsletter_table() {
     require_once ABSPATH . 'wp-admin/includes/upgrade.php';
     dbDelta( $sql );
 }
-register_activation_hook( __FILE__, 'obmc_create_newsletter_table' );
+
+/**
+ * Registers every post type and taxonomy the plugin owns.
+ *
+ * wp-admin/plugins.php calls activate_plugin() long after wp-settings.php has
+ * fired `init`, so the add_action( 'init', ... ) callbacks below never run in the
+ * activation request. Registering here means flush_rewrite_rules() writes the
+ * rules for the archives and single posts instead of leaving them out.
+ */
+function obmc_register_plugin_post_types() {
+    obmc_register_hero_slide_cpt();
+    obmc_register_featured_article_cpt();
+    obmc_register_article();
+    obmc_register_article_category();
+    obmc_register_author_cpt();
+    obmc_register_magazine_issue_cpt();
+    obmc_register_news_ticker_cpt();
+    obmc_register_advertisement_cpt();
+    obmc_register_footer_settings();
+    obmc_register_about_page_cpt();
+    obmc_register_contact_page_cpt();
+}
+
+/**
+ * Moves featured article rows off the pre-1.0.1 post type name.
+ *
+ * 1.0.0 registered `obmc_featured_article`, which is 21 characters long: over the
+ * limit core enforces in register_post_type(), and over `wp_posts.post_type`, which
+ * is a varchar(20). On a strict MySQL server wp_insert_post() rejected those rows
+ * outright, so most installs have none; where the server was not strict, the column
+ * silently truncated the value to `obmc_featured_articl`. Both forms are moved here.
+ *
+ * @return int Number of rows moved.
+ */
+function obmc_migrate_featured_article_post_type() {
+    global $wpdb;
+
+    $old_types = array( 'obmc_featured_article', 'obmc_featured_articl' );
+    $moved = 0;
+
+    /* phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Post types live in a wp_posts column rather than an option, so get_posts() cannot reach rows of a type that is no longer registered. This runs once per version, on activation and on the first admin page load after an update. */
+    foreach ( $old_types as $old_type ) {
+        $ids = $wpdb->get_col( $wpdb->prepare( "SELECT ID FROM {$wpdb->posts} WHERE post_type = %s", $old_type ) );
+        $ids = is_array( $ids ) ? $ids : array();
+
+        if ( ! $ids ) {
+            continue;
+        }
+
+        $updated = $wpdb->update(
+            $wpdb->posts,
+            array( 'post_type' => 'obmc_featured' ),
+            array( 'post_type' => $old_type ),
+            array( '%s' ),
+            array( '%s' )
+        );
+
+        foreach ( $ids as $id ) {
+            clean_post_cache( (int) $id );
+        }
+
+        if ( false !== $updated ) {
+            $moved += (int) $updated;
+        }
+    }
+    /* phpcs:enable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared */
+
+    return $moved;
+}
+
+/**
+ * Runs the data migrations a version bump needs, once per stored version.
+ */
+function obmc_maybe_upgrade() {
+    if ( OBMC_VERSION === get_option( 'obmc_db_version' ) ) {
+        return;
+    }
+
+    obmc_migrate_featured_article_post_type();
+
+    // No rewrite flush is needed: the rewrite slug stayed `obmc_featured_article`,
+    // so the rules written by 1.0.0 already describe the renamed post type.
+    update_option( 'obmc_db_version', OBMC_VERSION, false );
+}
+add_action( 'admin_init', 'obmc_maybe_upgrade' );
+
+/**
+ * Sets the plugin up on activation.
+ *
+ * Prints nothing: WordPress turns output during activation into an
+ * "unexpected output" warning.
+ */
+function obmc_activate() {
+    obmc_register_plugin_post_types();
+    obmc_create_newsletter_table();
+    obmc_maybe_upgrade();
+    flush_rewrite_rules();
+}
+register_activation_hook( __FILE__, 'obmc_activate' );
 
 function obmc_drop_newsletter_table() {
     global $wpdb;

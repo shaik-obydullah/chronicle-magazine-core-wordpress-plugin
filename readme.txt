@@ -5,7 +5,7 @@ Text Domain: obydullah-magazine-core
 Requires at least: 6.2
 Tested up to: 7.1
 Requires PHP: 8.0
-Stable tag: 1.0.0
+Stable tag: 1.0.1
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -77,10 +77,18 @@ The plugin registers content types and admin tooling only. Newsletter signup mar
 
 == Changelog ==
 
+= 1.0.1 =
+* Activation now registers the post types and taxonomy before flushing the rewrite rules, so the archives and single posts resolve right after activation instead of 404ing until somebody saves the permalinks again
+* Renamed the featured article post type from `obmc_featured_article` to `obmc_featured`: the old name was 21 characters long, one over the WordPress limit, which raised a notice on every page load
+* Existing featured article rows are migrated to the new post type on the first admin page load, and their permalinks are unchanged
+
 = 1.0.0 =
 * Initial release
 
 == Upgrade Notice ==
+
+= 1.0.1 =
+Themes that query the featured article post type must use `obmc_featured` instead of `obmc_featured_article`. Existing rows and permalinks are migrated automatically.
 
 = 1.0.0 =
 Initial release.
