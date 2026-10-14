@@ -3,7 +3,7 @@
  * Plugin Name: Obydullah Magazine Core
  * Plugin URI: https://obydullah.com/project/chronicle-magazine-core-wordpress-plugin
  * Description: Core functionality for Chronicle Magazine theme
- * Version: 1.0.1
+ * Version: 1.0.0
  * Author: Shaik Obydullah
  * Author URI: https://obydullah.com
  * Text Domain: obydullah-magazine-core
@@ -41,7 +41,7 @@ if ( ! defined( 'ABSPATH' ) ) {
     exit;
 }
 
-define( 'OBMC_VERSION', '1.0.1' );
+define( 'OBMC_VERSION', '1.0.0' );
 define( 'OBMC_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 define( 'OBMC_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
 define( 'OBMC_NEWSLETTER_CACHE_GROUP', 'obmc_newsletter' );
@@ -243,9 +243,9 @@ add_action( 'save_post_obmc_hero_slide', 'obmc_save_hero_slide_meta' );
 
 function obmc_register_featured_article_cpt() {
     // `obmc_featured_article` is 21 characters, one over WordPress' 20 character
-    // post type limit, so 1.0.0 raised a _doing_it_wrong() notice on every
-    // request. The rewrite slug stays `obmc_featured_article` on purpose so
-    // permalinks created before 1.0.1 keep resolving.
+    // post type limit, so it raised a _doing_it_wrong() notice on every request.
+    // The rewrite slug stays `obmc_featured_article` on purpose so earlier
+    // permalinks keep resolving.
     register_post_type( 'obmc_featured', array(
         'labels' => array(
             'name'          => __( 'Featured Articles', 'obydullah-magazine-core' ),
@@ -890,9 +890,11 @@ function obmc_newsletter_cache_get_count() {
     if ( false === $count ) {
         global $wpdb;
 
+        /* phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery -- Subscribers live in a custom table that no core API can query. */
         $count = (int) $wpdb->get_var(
             $wpdb->prepare( 'SELECT COUNT(*) FROM %i', obmc_newsletter_table() )
         );
+        /* phpcs:enable WordPress.DB.DirectDatabaseQuery.DirectQuery */
 
         // Short TTL as a safety net in case a write path is ever missed.
         wp_cache_set( 'count', $count, OBMC_NEWSLETTER_CACHE_GROUP, 5 * MINUTE_IN_SECONDS );
@@ -923,6 +925,7 @@ function obmc_newsletter_cache_get_subscribers( $per_page, $offset, $orderby, $o
         $columns = obmc_newsletter_sortable_columns();
         $orderby = array_key_exists( $orderby, $columns ) ? $orderby : 'id';
 
+        /* phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery -- Sorting comes from a custom table, and the result is cached below. */
         if ( 'ASC' === strtoupper( $order ) ) {
             $rows = $wpdb->get_results(
                 $wpdb->prepare(
@@ -952,6 +955,7 @@ function obmc_newsletter_cache_get_subscribers( $per_page, $offset, $orderby, $o
                 ARRAY_A
             );
         }
+        /* phpcs:enable WordPress.DB.DirectDatabaseQuery.DirectQuery */
 
         wp_cache_set( $key, $rows, OBMC_NEWSLETTER_CACHE_GROUP, 5 * MINUTE_IN_SECONDS );
     }
@@ -1001,11 +1005,11 @@ function obmc_register_plugin_post_types() {
 }
 
 /**
- * Moves featured article rows off the pre-1.0.1 post type name.
+ * Moves featured article rows off the old post type name.
  *
- * 1.0.0 registered `obmc_featured_article`, which is 21 characters long: over the
- * limit core enforces in register_post_type(), and over `wp_posts.post_type`, which
- * is a varchar(20). On a strict MySQL server wp_insert_post() rejected those rows
+ * An earlier build registered `obmc_featured_article`, which is 21 characters long: over the
+ * limit core enforces in register_post_type(), and over `wp_posts.post_type`, which is a
+ * varchar(20). On a strict MySQL server wp_insert_post() rejected those rows
  * outright, so most installs have none; where the server was not strict, the column
  * silently truncated the value to `obmc_featured_articl`. Both forms are moved here.
  *
@@ -1080,7 +1084,10 @@ register_activation_hook( __FILE__, 'obmc_activate' );
 function obmc_drop_newsletter_table() {
     global $wpdb;
     $table_name = obmc_newsletter_table();
+
+    /* phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.DirectDatabaseQuery.SchemaChange -- Uninstalling the plugin must drop the subscriber table; there is nothing left to cache and schema anyway changes by design. */
     $wpdb->query( $wpdb->prepare( 'DROP TABLE IF EXISTS %i', $table_name ) );
+    /* phpcs:enable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.DirectDatabaseQuery.SchemaChange */
 
     delete_option( 'obmc_newsletter_cache_version' );
 }
@@ -1109,6 +1116,7 @@ function obmc_handle_newsletter_submission() {
     global $wpdb;
     $table_name = obmc_newsletter_table();
 
+    /* phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Custom table check must stay request-local; caching a membership answer would go stale. */
     $existing = $wpdb->get_var( $wpdb->prepare( 'SELECT id FROM %i WHERE email = %s', $table_name, $email ) );
     if ( $existing ) {
         wp_send_json_error( array( 'error' => __( 'This email is already subscribed.', 'obydullah-magazine-core' ) ) );
@@ -1124,6 +1132,7 @@ function obmc_handle_newsletter_submission() {
         ),
         array( '%s', '%s', '%s', '%s' )
     );
+    /* phpcs:enable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching */
 
     if ( false === $result ) {
         wp_send_json_error( array( 'error' => __( 'Database error. Please try again.', 'obydullah-magazine-core' ) ) );
@@ -1166,6 +1175,7 @@ function obmc_toggle_subscriber_status() {
 
     // Read the stored status and flip it server-side rather than trusting a
     // status passed through the query string.
+    /* phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Custom table read must be request-local; the write below invalidates any cache. */
     $current = $wpdb->get_var(
         $wpdb->prepare( 'SELECT status FROM %i WHERE id = %d', $table_name, $subscriber_id )
     );
@@ -1183,6 +1193,7 @@ function obmc_toggle_subscriber_status() {
         array( '%s' ),
         array( '%d' )
     );
+    /* phpcs:enable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching */
 
     if ( false === $updated ) {
         wp_die( esc_html__( 'Could not update the subscriber status.', 'obydullah-magazine-core' ) );
@@ -1218,11 +1229,13 @@ function obmc_render_newsletter_page() {
         if ( ! empty( $ids ) ) {
             $deleted = 0;
 
+            /* phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Custom table rows are deleted per id and the cache is flushed once below. */
             foreach ( $ids as $id ) {
                 if ( false !== $wpdb->delete( $table_name, array( 'id' => $id ), array( '%d' ) ) ) {
                     $deleted++;
                 }
             }
+            /* phpcs:enable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching */
 
             if ( $deleted > 0 ) {
                 obmc_newsletter_cache_flush();
